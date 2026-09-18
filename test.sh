@@ -17,17 +17,29 @@ fail() { echo "FAIL: $1" >&2; exit 1; }
 [ "$out" = "$DIR" ] || fail "claude ran with CLAUDE_CONFIG_DIR=$out, expected $DIR"
 
 # shared entries are symlinks that resolve
-for n in skills agents commands settings.json plugins/installed_plugins.json; do
+for n in skills agents commands plugins settings.json; do
   [ -e "$HOME/.claude/$n" ] || continue   # skip what this machine doesn't have
   [ -L "$DIR/$n" ] || fail "$n is not a symlink"
   [ -e "$DIR/$n" ] || fail "$n symlink is broken"
 done
 [ -e "$DIR/skills" ] || fail "no skills linked at all"
 
-# identity and concurrently-written state must NOT be shared
-for n in projects sessions history.jsonl .credentials.json plugins/cache; do
+# plugins are shared whole, so installed plugin code is reachable
+[ -d "$DIR/plugins/cache" ] || fail "plugin cache not reachable through the profile"
+
+# identity and per-profile state must NOT be shared
+for n in projects sessions history.jsonl .credentials.json; do
   [ -e "$DIR/$n" ] && fail "$n should not exist in a fresh profile"
 done
+
+# a real directory the profile already owns must not get a link nested inside it
+mkdir -p "$DIR/skills"/.keep 2>/dev/null || true
+rm -f "$DIR/skills" 2>/dev/null || true
+mkdir -p "$DIR/skills"
+CC_PROFILE_ROOT="$TMP/root" PATH="$TMP/bin:$PATH" ./cc-profile.sh t1 >/dev/null 2>&1
+[ -L "$DIR/skills" ] && fail "clobbered a real skills dir"
+[ -e "$DIR/skills/skills" ] && fail "nested a link inside a real skills dir"
+rmdir "$DIR/skills"
 
 # seeded config has MCP servers and no account
 python3 - "$DIR/.claude.json" <<'PY' || exit 1

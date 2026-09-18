@@ -42,16 +42,19 @@ Profiles live in `~/.claude-profiles/<name>/`.
 profile sees it immediately.
 
 ```
-skills  agents  commands  hooks  CLAUDE.md  settings.json
-output-styles  statusline-command.sh
-plugins/{marketplaces,synced,installed_plugins.json,known_marketplaces.json}
+skills  agents  commands  hooks  plugins  CLAUDE.md
+settings.json  output-styles  statusline-command.sh
 ```
+
+`plugins/` is shared whole — the marketplace registry, the installed plugin code in
+`plugins/cache/`, and each plugin's own state in `plugins/data/`. Install a plugin once
+and every profile has it, at the same version, with the same data.
 
 **Separate** — each profile gets its own:
 
 ```
-credentials  .claude.json  projects  sessions  history.jsonl
-todos  shell-snapshots  plugins/cache  plugins/data
+credentials  .claude.json  projects  sessions
+history.jsonl  todos  shell-snapshots
 ```
 
 Those are written while Claude is running, so sharing them between two live processes
@@ -67,6 +70,10 @@ deliberately never copied — that's the identity being split.
 - `settings.json` is a symlink, so `/config` in **either** profile edits both. If you
   want them to differ, replace the symlink with a copy:
   `cp ~/.claude/settings.json ~/.claude-profiles/work/settings.json`.
+- Plugin state in `plugins/data/` is shared too, so a plugin that keeps a database
+  (memory plugins, workflow trackers) sees both accounts' activity as one stream. That
+  is usually what you want from one person with two accounts, but it does mean two
+  running profiles write to the same files.
 - Usage limits are per-account. That's the point.
 - macOS: Claude Code may store OAuth tokens in the login Keychain rather than in the
   profile directory. Verify once (see below) before relying on true parallel use.
@@ -103,7 +110,8 @@ Then the live check, which also settles the Keychain question:
 1. Terminal A: `cc work`, `/login` with the second account.
 2. Terminal B, at the same time: `claude`, then `/status`. It should still show your
    original account, and A should still be logged in.
-3. In A: `/skills` and `/agents` list the same entries as B; `/mcp` shows your servers.
+3. In A: `/skills`, `/agents` and `/plugin` list the same entries as B; `/mcp` shows
+   your servers.
 
 If B got logged out, the two profiles are sharing one Keychain entry and parallel use
 isn't available on your version — please open an issue with your `claude --version`.

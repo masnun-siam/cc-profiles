@@ -7,10 +7,9 @@ set -euo pipefail
 SRC="${CC_PROFILE_SRC:-$HOME/.claude}"
 ROOT="${CC_PROFILE_ROOT:-$HOME/.claude-profiles}"
 
-# Shared with the main config dir via symlink. Adding a skill/agent/command to
-# ~/.claude shows up in every profile immediately — the whole directory is linked.
-SHARED=(skills agents commands hooks CLAUDE.md settings.json output-styles statusline-command.sh)
-SHARED_PLUGINS=(marketplaces synced installed_plugins.json known_marketplaces.json)
+# Shared with the main config dir via symlink. Adding a skill/agent/command/plugin
+# to ~/.claude shows up in every profile immediately — whole directories are linked.
+SHARED=(skills agents commands hooks plugins CLAUDE.md settings.json output-styles statusline-command.sh)
 
 usage() { echo "usage: cc <profile> [claude args...]" >&2; exit 2; }
 [ $# -ge 1 ] || usage
@@ -19,15 +18,17 @@ case "$1" in -*|"") usage;; esac
 PROFILE=$1; shift
 DIR="$ROOT/$PROFILE"
 
-mkdir -p "$DIR/plugins"
+mkdir -p "$DIR"
 
 for name in "${SHARED[@]}"; do
   [ -e "$SRC/$name" ] || continue
+  # Never link into a real directory the profile already built on its own —
+  # `ln -sfn` would nest the link inside it instead of replacing it.
+  if [ -e "$DIR/$name" ] && [ ! -L "$DIR/$name" ]; then
+    echo "cc-profile: $name already exists in $PROFILE, leaving it alone" >&2
+    continue
+  fi
   ln -sfn "$SRC/$name" "$DIR/$name"
-done
-for name in "${SHARED_PLUGINS[@]}"; do
-  [ -e "$SRC/plugins/$name" ] || continue
-  ln -sfn "$SRC/plugins/$name" "$DIR/plugins/$name"
 done
 
 # Seed MCP servers once, from the main config. Never copy oauthAccount — that is
