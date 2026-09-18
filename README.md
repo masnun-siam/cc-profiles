@@ -19,20 +19,33 @@ copy your MCP server list into a new profile).
 ## Install
 
 ```bash
+brew install masnun-siam/tap/cc-profiles
+```
+
+Or without Homebrew:
+
+```bash
 git clone https://github.com/masnun-siam/cc-profiles.git
-echo 'alias cc="$PWD/cc-profiles/cc-profile.sh"' >> ~/.zshrc   # or ~/.bashrc
+sudo ln -s "$PWD/cc-profiles/bin/cc-profile" /usr/local/bin/cc-profile
+```
+
+Optionally shorten it. Do **not** name it `cc` on `$PATH` — that's the C compiler.
+An interactive shell alias is safe, since aliases don't affect scripts or `make`:
+
+```bash
+echo "alias cc='cc-profile'" >> ~/.zshrc   # or ~/.bashrc
 ```
 
 ## Use
 
 ```bash
-cc work            # Claude Code as the "work" account
-cc work -p "hi"    # extra args pass straight through to claude
-claude             # your original account, in another terminal, simultaneously
+cc-profile work            # Claude Code as the "work" account
+cc-profile work -p "hi"    # extra args pass straight through to claude
+claude                     # your original account, in another terminal, at the same time
 ```
 
 The first time you open a new profile, run `/login` inside it. That's it — profiles are
-created on demand, so a third account is just `cc client-x`.
+created on demand, so a third account is just `cc-profile client-x`.
 
 Profiles live in `~/.claude-profiles/<name>/`.
 
@@ -45,6 +58,9 @@ profile sees it immediately.
 skills  agents  commands  hooks  plugins  CLAUDE.md
 settings.json  output-styles  statusline-command.sh
 ```
+
+Requires bash (3.2 is fine, so stock macOS works) and, optionally, `python3` to copy
+your MCP server list into a new profile — without it the profile starts with none.
 
 `plugins/` is shared whole — the marketplace registry, the installed plugin code in
 `plugins/cache/`, and each plugin's own state in `plugins/data/`. Install a plugin once
@@ -75,8 +91,10 @@ deliberately never copied — that's the identity being split.
   is usually what you want from one person with two accounts, but it does mean two
   running profiles write to the same files.
 - Usage limits are per-account. That's the point.
-- macOS: Claude Code may store OAuth tokens in the login Keychain rather than in the
-  profile directory. Verify once (see below) before relying on true parallel use.
+- Credentials really are per-profile. Claude Code stores `.credentials.json` under
+  `CLAUDE_CONFIG_DIR`, and on macOS
+  [keys the Keychain entry to that directory too](https://code.claude.com/docs/en/authentication#credential-management),
+  so a session with a different config dir reads a different entry. Two logins coexist.
 
 ## Configuration
 
@@ -105,16 +123,13 @@ the shared symlinks resolve, the private state is absent, the seeded config has
 `mcpServers` and no `oauthAccount`, re-running is idempotent, and bad usage exits
 non-zero. Touches nothing real.
 
-Then the live check, which also settles the Keychain question:
+Then the live check:
 
-1. Terminal A: `cc work`, `/login` with the second account.
-2. Terminal B, at the same time: `claude`, then `/status`. It should still show your
-   original account, and A should still be logged in.
+1. Terminal A: `cc-profile work`, `/login` with the second account.
+2. Terminal B, at the same time: `claude`, then `/status`. It shows your original
+   account, and A stays logged in.
 3. In A: `/skills`, `/agents` and `/plugin` list the same entries as B; `/mcp` shows
    your servers.
-
-If B got logged out, the two profiles are sharing one Keychain entry and parallel use
-isn't available on your version — please open an issue with your `claude --version`.
 
 ## Uninstall
 
