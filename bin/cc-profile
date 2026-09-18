@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run a second (third, ...) Claude Code account in parallel with your main one.
-#   cc work            -> opens Claude Code as the "work" account
-#   cc work -p "hi"    -> args pass through to claude
+#   cc-profile work            -> opens Claude Code as the "work" account
+#   cc-profile work -p "hi"    -> args pass through to claude
 set -euo pipefail
 
 SRC="${CC_PROFILE_SRC:-$HOME/.claude}"
@@ -11,7 +11,7 @@ ROOT="${CC_PROFILE_ROOT:-$HOME/.claude-profiles}"
 # to ~/.claude shows up in every profile immediately — whole directories are linked.
 SHARED=(skills agents commands hooks plugins CLAUDE.md settings.json output-styles statusline-command.sh)
 
-usage() { echo "usage: cc <profile> [claude args...]" >&2; exit 2; }
+usage() { echo "usage: ${0##*/} <profile> [claude args...]" >&2; exit 2; }
 [ $# -ge 1 ] || usage
 case "$1" in -*|"") usage;; esac
 
