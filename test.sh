@@ -4,13 +4,15 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+CC_BIN="${CC_BIN:-./bin/cc-profile}"
+
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$TMP/bin"
 printf '#!/bin/sh\necho "$CLAUDE_CONFIG_DIR"\n' > "$TMP/bin/claude"
 chmod +x "$TMP/bin/claude"
 
 DIR="$TMP/root/t1"
-out=$(CC_PROFILE_ROOT="$TMP/root" PATH="$TMP/bin:$PATH" ./cc-profile.sh t1)
+out=$(CC_PROFILE_ROOT="$TMP/root" PATH="$TMP/bin:$PATH" $CC_BIN t1)
 
 fail() { echo "FAIL: $1" >&2; exit 1; }
 
@@ -36,7 +38,7 @@ done
 mkdir -p "$DIR/skills"/.keep 2>/dev/null || true
 rm -f "$DIR/skills" 2>/dev/null || true
 mkdir -p "$DIR/skills"
-CC_PROFILE_ROOT="$TMP/root" PATH="$TMP/bin:$PATH" ./cc-profile.sh t1 >/dev/null 2>&1
+CC_PROFILE_ROOT="$TMP/root" PATH="$TMP/bin:$PATH" $CC_BIN t1 >/dev/null 2>&1
 [ -L "$DIR/skills" ] && fail "clobbered a real skills dir"
 [ -e "$DIR/skills/skills" ] && fail "nested a link inside a real skills dir"
 rmdir "$DIR/skills"
@@ -50,10 +52,10 @@ assert "oauthAccount" not in d, "oauthAccount leaked into seeded .claude.json"
 PY
 
 # second run is idempotent
-CC_PROFILE_ROOT="$TMP/root" PATH="$TMP/bin:$PATH" ./cc-profile.sh t1 >/dev/null
+CC_PROFILE_ROOT="$TMP/root" PATH="$TMP/bin:$PATH" $CC_BIN t1 >/dev/null
 
 # bad usage is rejected
-if CC_PROFILE_ROOT="$TMP/root" PATH="$TMP/bin:$PATH" ./cc-profile.sh 2>/dev/null; then
+if CC_PROFILE_ROOT="$TMP/root" PATH="$TMP/bin:$PATH" $CC_BIN 2>/dev/null; then
   fail "missing profile name should exit non-zero"
 fi
 
